@@ -160,9 +160,15 @@ def format_data(format_, data):
     return formats[format_][0](data)
 
 
-def render(template_path, data, extensions, strict=False):
+def render(template_path, data, extensions, strict=False, system_loader=False):
+    if system_loader:
+        system_loader_path = system_loader
+    else:
+        system_loader_path = os.path.dirname(template_path)
+        template_path = os.path.basename(template_path)
+
     env = Environment(
-        loader=FileSystemLoader(os.path.dirname(template_path)),
+        loader=FileSystemLoader(system_loader_path),
         extensions=extensions,
         keep_trailing_newline=True,
     )
@@ -173,7 +179,7 @@ def render(template_path, data, extensions, strict=False):
     # Add environ global
     env.globals['environ'] = os.environ.get
 
-    output = env.get_template(os.path.basename(template_path)).render(data)
+    output = env.get_template(template_path).render(data)
     return output.encode('utf-8')
 
 
@@ -227,7 +233,7 @@ def cli(opts, args):
             sys.stderr.write('ERROR: unknown section. Exiting.')
             sys.exit(1)
 
-    output = render(template_path, data, extensions, opts.strict)
+    output = render(template_path, data, extensions, opts.strict, opts.system_loader)
 
     if isinstance(output, binary_type):
         output = output.decode('utf-8')
@@ -269,6 +275,10 @@ def main():
         '--strict',
         help='Disallow undefined variables to be used within the template',
         dest='strict', action='store_true')
+    parser.add_option(
+        '--system-loader',
+        help='Disallow undefined variables to be used within the template',
+        dest='system_loader', action='store')
     opts, args = parser.parse_args()
 
     # Dedupe list
